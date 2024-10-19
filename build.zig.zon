@@ -4,6 +4,10 @@
     .version = "0.0.1",
 
     .dependencies = .{
+        .FLib = .{
+            .url = "https://github.com/farey0/FLib/archive/refs/heads/main.zip",
+            .hash = "12205eca088bac0ec34b8ee60c348e572d3a56ff459559c4a9a3845691426b2582c5",
+        },
     },
 
     .paths = .{

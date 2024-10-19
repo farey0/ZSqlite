@@ -24,15 +24,38 @@ pub fn build(b: *std.Build) void {
 
     sqliteLib.linkLibC();
 
-    const testExe = b.addExecutable(.{
-        .name = "sqliteTest",
-        .root_source_file = b.path("test.zig"),
+    const Options = b.addOptions();
+    Options.addOption([]const u8, "Version", "3.44.2");
+    Options.addOption(bool, "AssertTypeStatementResult", b.option(bool, "assert_type", "Assert the type of the result of a statement") orelse (optimize == .Debug));
+
+    const FLib = b.dependency("FLib", .{ .target = target, .optimize = optimize }).module("FLib");
+
+    const ZSqlite = b.addModule("ZSqlite", .{
+        .root_source_file = b.path("src/ZSqlite.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+        .imports = &.{
+            .{ .name = "FLib", .module = FLib },
+        },
+    });
+
+    ZSqlite.addOptions("Config", Options);
+
+    ZSqlite.linkLibrary(sqliteLib);
+    ZSqlite.addIncludePath(b.path("include/"));
+
+    const ZSqliteUnitTests = b.addTest(.{
+        .root_source_file = b.path("src/Test.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    testExe.linkLibrary(sqliteLib);
-    testExe.addIncludePath(b.path("include/"));
+    ZSqliteUnitTests.root_module.addImport("ZSqlite", ZSqlite);
+    ZSqliteUnitTests.root_module.addImport("FLib", FLib);
 
-    b.installArtifact(testExe);
+    const UnitTestRun = b.addRunArtifact(ZSqliteUnitTests);
+
+    const TestStep = b.step("test", "Run unit tests");
+    TestStep.dependOn(&UnitTestRun.step);
 }
